@@ -1,0 +1,20 @@
+{
+  "name": "Wowdash Admin Template with MCP Supabase",
+  "type": "static",
+  "port": 3000,
+  "root": ".",
+  "index": "index.html",
+  "fallback": "index.html",
+  "mcp": {
+    "servers": {
+      "supabase": {
+        "command": "npx",
+        "args": ["@modelcontextprotocol/server-supabase"],
+        "env": {
+          "SUPABASE_URL": "${SUPABASE_URL}",
+          "SUPABASE_SERVICE_ROLE_KEY": "${SUPABASE_SERVICE_ROLE_KEY}"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "name": "wowdash-admin-template",
+  "version": "1.0.0",
+  "description": "Bootstrap 5 Admin Dashboard HTML Template compatible with Windsurf",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx http-server . -p 3000 -o",
+    "dev": "npx live-server --port=3000 --open=sign-in.html",
+    "build": "echo 'Static HTML project - no build required'",
+    "serve": "npx http-server . -p 8080",
+    "setup-database": "node scripts/setup-database.js",
+    "create-users": "node scripts/create-users.js"
+  },
+  "keywords": [
+    "admin",
+    "dashboard",
+    "bootstrap",
+    "html",
+    "template",
+    "windsurf"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0"
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1",
+    "live-server": "^1.2.2",
+    "node-fetch": "^3.3.2",
+    "dotenv": "^16.3.1"
+  },
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not dead"
+  ]
+}

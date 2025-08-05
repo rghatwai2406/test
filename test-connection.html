@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supabase Connection Test</title>
+    <link rel="stylesheet" href="assets/css/lib/bootstrap.min.css">
+    <style>
+        .test-container {
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .status-indicator {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 10px;
+        }
+        .status-success { background-color: #28a745; }
+        .status-error { background-color: #dc3545; }
+        .status-warning { background-color: #ffc107; }
+        .test-result {
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        .log-area {
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="test-container">
+            <h1 class="text-center mb-4">🔗 Supabase Connection Test</h1>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Connection Tests</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="test-results">
+                                <div class="test-result" id="config-test">
+                                    <span class="status-indicator status-warning"></span>
+                                    <strong>Configuration:</strong> <span id="config-status">Testing...</span>
+                                </div>
+                                <div class="test-result" id="client-test">
+                                    <span class="status-indicator status-warning"></span>
+                                    <strong>Client Connection:</strong> <span id="client-status">Testing...</span>
+                                </div>
+                                <div class="test-result" id="auth-test">
+                                    <span class="status-indicator status-warning"></span>
+                                    <strong>Authentication:</strong> <span id="auth-status">Testing...</span>
+                                </div>
+                                <div class="test-result" id="database-test">
+                                    <span class="status-indicator status-warning"></span>
+                                    <strong>Database Access:</strong> <span id="database-status">Testing...</span>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-4">
+                                <button class="btn btn-primary" onclick="runTests()">🔄 Run Tests Again</button>
+                                <button class="btn btn-success" onclick="testAuth()">🔐 Test Authentication</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Test Logs</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="log-area" class="log-area"></div>
+                            <button class="btn btn-sm btn-secondary mt-2" onclick="clearLogs()">Clear Logs</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Quick Authentication Test</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>Test Sign Up</h6>
+                                    <div class="mb-3">
+                                        <input type="email" class="form-control" id="signup-email" placeholder="test@example.com">
+                                    </div>
+                                    <div class="mb-3">
+                                        <input type="password" class="form-control" id="signup-password" placeholder="password123">
+                                    </div>
+                                    <button class="btn btn-success" onclick="testSignUp()">Test Sign Up</button>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>Test Sign In</h6>
+                                    <div class="mb-3">
+                                        <input type="email" class="form-control" id="signin-email" placeholder="test@example.com">
+                                    </div>
+                                    <div class="mb-3">
+                                        <input type="password" class="form-control" id="signin-password" placeholder="password123">
+                                    </div>
+                                    <button class="btn btn-primary" onclick="testSignIn()">Test Sign In</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="assets/js/supabase-config.js"></script>
+    
+    <script>
+        // Logging function
+        function log(message, type = 'info') {
+            const logArea = document.getElementById('log-area');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.innerHTML = `<span style="color: #666;">[${timestamp}]</span> <span style="color: ${type === 'error' ? 'red' : type === 'success' ? 'green' : 'black'};">${message}</span>`;
+            logArea.appendChild(logEntry);
+            logArea.scrollTop = logArea.scrollHeight;
+        }
+
+        function clearLogs() {
+            document.getElementById('log-area').innerHTML = '';
+        }
+
+        function updateTestStatus(testId, status, message) {
+            const testElement = document.getElementById(testId);
+            const statusIndicator = testElement.querySelector('.status-indicator');
+            const statusText = testElement.querySelector('span:last-child');
+            
+            statusIndicator.className = `status-indicator status-${status}`;
+            statusText.textContent = message;
+        }
+
+        // Test functions
+        async function testConfiguration() {
+            log('Testing configuration...');
+            try {
+                if (!SUPABASE_URL || SUPABASE_URL === 'YOUR_SUPABASE_URL_HERE') {
+                    throw new Error('Supabase URL not configured');
+                }
+                if (!SUPABASE_ANON_KEY || SUPABASE_ANON_KEY === 'YOUR_SUPABASE_ANON_KEY_HERE') {
+                    throw new Error('Supabase Anon Key not configured');
+                }
+                
+                updateTestStatus('config-test', 'success', 'Configuration OK');
+                log('✅ Configuration is valid', 'success');
+                return true;
+            } catch (error) {
+                updateTestStatus('config-test', 'error', `Error: ${error.message}`);
+                log(`❌ Configuration error: ${error.message}`, 'error');
+                return false;
+            }
+        }
+
+        async function testClientConnection() {
+            log('Testing client connection...');
+            try {
+                if (!window.supabase) {
+                    throw new Error('Supabase client not initialized');
+                }
+                
+                // Test basic connection by getting auth user
+                const { data, error } = await supabase.auth.getUser();
+                
+                updateTestStatus('client-test', 'success', 'Client Connected');
+                log('✅ Supabase client connected successfully', 'success');
+                return true;
+            } catch (error) {
+                updateTestStatus('client-test', 'error', `Error: ${error.message}`);
+                log(`❌ Client connection error: ${error.message}`, 'error');
+                return false;
+            }
+        }
+
+        async function testAuthentication() {
+            log('Testing authentication system...');
+            try {
+                // Test auth methods availability
+                if (!supabase.auth) {
+                    throw new Error('Auth module not available');
+                }
+                
+                const { data: { user } } = await supabase.auth.getUser();
+                
+                updateTestStatus('auth-test', 'success', user ? 'User logged in' : 'Auth system ready');
+                log(`✅ Authentication system ready. Current user: ${user ? user.email : 'None'}`, 'success');
+                return true;
+            } catch (error) {
+                updateTestStatus('auth-test', 'error', `Error: ${error.message}`);
+                log(`❌ Authentication error: ${error.message}`, 'error');
+                return false;
+            }
+        }
+
+        async function testDatabaseAccess() {
+            log('Testing database access...');
+            try {
+                // Try to access a table (this might fail due to RLS, which is expected)
+                const { data, error } = await supabase
+                    .from('user_profiles')
+                    .select('count', { count: 'exact', head: true });
+                
+                if (error && error.code === 'PGRST116') {
+                    // Table doesn't exist
+                    updateTestStatus('database-test', 'error', 'Tables not created');
+                    log('❌ Database tables not found. Please run the schema.sql', 'error');
+                    return false;
+                } else if (error && error.code === '42501') {
+                    // Permission denied (RLS working)
+                    updateTestStatus('database-test', 'success', 'Database accessible (RLS active)');
+                    log('✅ Database accessible. RLS policies are active.', 'success');
+                    return true;
+                } else if (!error) {
+                    updateTestStatus('database-test', 'success', 'Database accessible');
+                    log('✅ Database accessible and tables exist', 'success');
+                    return true;
+                } else {
+                    throw error;
+                }
+            } catch (error) {
+                updateTestStatus('database-test', 'error', `Error: ${error.message}`);
+                log(`❌ Database error: ${error.message}`, 'error');
+                return false;
+            }
+        }
+
+        async function runTests() {
+            log('🚀 Starting connection tests...');
+            
+            const configOk = await testConfiguration();
+            if (!configOk) return;
+            
+            const clientOk = await testClientConnection();
+            if (!clientOk) return;
+            
+            await testAuthentication();
+            await testDatabaseAccess();
+            
+            log('🏁 All tests completed!');
+        }
+
+        async function testSignUp() {
+            const email = document.getElementById('signup-email').value;
+            const password = document.getElementById('signup-password').value;
+            
+            if (!email || !password) {
+                log('❌ Please enter email and password for sign up test', 'error');
+                return;
+            }
+            
+            log(`🔐 Testing sign up for: ${email}`);
+            
+            try {
+                const { data, error } = await supabase.auth.signUp({
+                    email: email,
+                    password: password,
+                    options: {
+                        data: {
+                            full_name: 'Test User'
+                        }
+                    }
+                });
+                
+                if (error) throw error;
+                
+                log(`✅ Sign up successful! User ID: ${data.user?.id}`, 'success');
+                if (data.user && !data.user.email_confirmed_at) {
+                    log('📧 Please check email for confirmation link', 'info');
+                }
+            } catch (error) {
+                log(`❌ Sign up error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testSignIn() {
+            const email = document.getElementById('signin-email').value;
+            const password = document.getElementById('signin-password').value;
+            
+            if (!email || !password) {
+                log('❌ Please enter email and password for sign in test', 'error');
+                return;
+            }
+            
+            log(`🔐 Testing sign in for: ${email}`);
+            
+            try {
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+                
+                if (error) throw error;
+                
+                log(`✅ Sign in successful! Welcome ${data.user.email}`, 'success');
+                
+                // Test getting user profile
+                const { data: profile, error: profileError } = await supabase
+                    .from('user_profiles')
+                    .select('*')
+                    .eq('id', data.user.id)
+                    .single();
+                
+                if (!profileError && profile) {
+                    log(`👤 User profile found. Role: ${profile.role}`, 'success');
+                }
+                
+            } catch (error) {
+                log(`❌ Sign in error: ${error.message}`, 'error');
+            }
+        }
+
+        function testAuth() {
+            log('🔐 Opening authentication test section...');
+            document.querySelector('.card:last-child').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Run tests on page load
+        window.addEventListener('load', function() {
+            log('🌟 Supabase Connection Test Tool loaded');
+            log('📋 Click "Run Tests Again" to start testing your connection');
+            setTimeout(runTests, 1000);
+        });
+    </script>
+</body>
+</html>

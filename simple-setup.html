@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Setup - Wowdash Admin</title>
+    <link rel="stylesheet" href="assets/css/lib/bootstrap.min.css">
+    <style>
+        .setup-container {
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .step-card {
+            margin-bottom: 20px;
+            border-left: 4px solid #007bff;
+        }
+        .step-completed {
+            border-left-color: #28a745;
+            background-color: #f8fff9;
+        }
+        .step-current {
+            border-left-color: #ffc107;
+            background-color: #fffbf0;
+        }
+        .credentials-box {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .role-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .super-admin { background-color: #dc3545; color: white; }
+        .admin { background-color: #ffc107; color: black; }
+        .user { background-color: #28a745; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="setup-container">
+            <h1 class="text-center mb-4">🚀 Simple Setup Guide</h1>
+            <p class="text-center text-muted mb-5">Follow these 3 easy steps to complete your setup</p>
+            
+            <!-- Step 1: Database Setup -->
+            <div class="card step-card step-completed">
+                <div class="card-body">
+                    <h5 class="card-title">✅ Step 1: Database Setup (COMPLETED)</h5>
+                    <p class="card-text">Your database configuration has been created automatically.</p>
+                    <small class="text-muted">File created: database/auto-setup.sql</small>
+                </div>
+            </div>
+            
+            <!-- Step 2: Run SQL in Supabase -->
+            <div class="card step-card step-current">
+                <div class="card-body">
+                    <h5 class="card-title">⚠️ Step 2: Copy SQL to Supabase (REQUIRED)</h5>
+                    <p class="card-text">You need to run the database setup in your Supabase dashboard:</p>
+                    <ol>
+                        <li>Go to <a href="https://supabase.com" target="_blank">supabase.com</a> and sign in</li>
+                        <li>Click <strong>"SQL Editor"</strong> in the left sidebar</li>
+                        <li>Copy the SQL below and paste it in the editor</li>
+                        <li>Click <strong>"Run"</strong></li>
+                    </ol>
+                    
+                    <div class="mt-3">
+                        <button class="btn btn-primary" onclick="showSQL()">📋 Show SQL Code</button>
+                        <button class="btn btn-success ms-2" onclick="copySQL()">📄 Copy SQL</button>
+                    </div>
+                    
+                    <div id="sql-container" style="display: none;" class="mt-3">
+                        <textarea id="sql-code" class="form-control" rows="10" readonly>-- Wowdash Database Setup SQL
+-- Copy this entire code and run it in your Supabase SQL Editor
+
+-- Create user profiles table
+CREATE TABLE IF NOT EXISTS public.user_profiles (
+    id UUID REFERENCES auth.users(id) PRIMARY KEY,
+    email TEXT UNIQUE NOT NULL,
+    full_name TEXT,
+    avatar_url TEXT,
+    role TEXT DEFAULT 'user' CHECK (role IN ('user', 'admin', 'super_admin')),
+    status TEXT DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'suspended')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create dashboard statistics table
+CREATE TABLE IF NOT EXISTS public.dashboard_stats (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    total_users INTEGER DEFAULT 0,
+    total_admins INTEGER DEFAULT 0,
+    total_revenue DECIMAL(10,2) DEFAULT 0.00,
+    total_orders INTEGER DEFAULT 0,
+    active_sessions INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create activity logs table
+CREATE TABLE IF NOT EXISTS public.activity_logs (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id),
+    action TEXT NOT NULL,
+    description TEXT,
+    ip_address INET,
+    user_agent TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create notifications table
+CREATE TABLE IF NOT EXISTS public.notifications (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id),
+    title TEXT NOT NULL,
+    message TEXT NOT NULL,
+    type TEXT DEFAULT 'info' CHECK (type IN ('info', 'success', 'warning', 'error')),
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create settings table
+CREATE TABLE IF NOT EXISTS public.app_settings (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    key TEXT UNIQUE NOT NULL,
+    value JSONB,
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Enable Row Level Security
+ALTER TABLE public.user_profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.dashboard_stats ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.activity_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.app_settings ENABLE ROW LEVEL SECURITY;
+
+-- Create security policies
+CREATE POLICY "Users can view own profile" ON public.user_profiles
+    FOR SELECT USING (auth.uid() = id);
+
+CREATE POLICY "Admins can view all profiles" ON public.user_profiles
+    FOR SELECT USING (
+        EXISTS (
+            SELECT 1 FROM public.user_profiles 
+            WHERE id = auth.uid() AND role IN ('admin', 'super_admin')
+        )
+    );
+
+CREATE POLICY "Users can update own profile" ON public.user_profiles
+    FOR UPDATE USING (auth.uid() = id);
+
+CREATE POLICY "Admins can view dashboard stats" ON public.dashboard_stats
+    FOR SELECT USING (
+        EXISTS (
+            SELECT 1 FROM public.user_profiles 
+            WHERE id = auth.uid() AND role IN ('admin', 'super_admin')
+        )
+    );
+
+-- Function to create user profile automatically
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO public.user_profiles (id, email, full_name)
+    VALUES (NEW.id, NEW.email, NEW.raw_user_meta_data->>'full_name');
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Trigger to create profile on user signup
+CREATE TRIGGER on_auth_user_created
+    AFTER INSERT ON auth.users
+    FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- Insert default data
+INSERT INTO public.dashboard_stats (total_users, total_admins, total_revenue, total_orders, active_sessions)
+VALUES (0, 1, 0.00, 0, 0)
+ON CONFLICT DO NOTHING;
+
+INSERT INTO public.app_settings (key, value, description) VALUES
+('site_name', '"Wowdash Admin"', 'Application name'),
+('theme', '"light"', 'Default theme')
+ON CONFLICT (key) DO NOTHING;</textarea>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Step 3: Create Users -->
+            <div class="card step-card">
+                <div class="card-body">
+                    <h5 class="card-title">👥 Step 3: Create Your User Accounts</h5>
+                    <p class="card-text">After running the SQL, create these 3 accounts manually in Supabase:</p>
+                    
+                    <div class="credentials-box">
+                        <span class="role-badge super-admin">SUPER ADMIN</span>
+                        <strong>Email:</strong> superadmin@example.com<br>
+                        <strong>Password:</strong> admin123<br>
+                        <strong>Access:</strong> Full system control
+                    </div>
+                    
+                    <div class="credentials-box">
+                        <span class="role-badge admin">ADMIN</span>
+                        <strong>Email:</strong> admin@example.com<br>
+                        <strong>Password:</strong> admin123<br>
+                        <strong>Access:</strong> User management + analytics
+                    </div>
+                    
+                    <div class="credentials-box">
+                        <span class="role-badge user">USER</span>
+                        <strong>Email:</strong> user@example.com<br>
+                        <strong>Password:</strong> admin123<br>
+                        <strong>Access:</strong> Personal dashboard only
+                    </div>
+                    
+                    <div class="mt-3">
+                        <h6>How to create users in Supabase:</h6>
+                        <ol>
+                            <li>Go to your Supabase Dashboard → <strong>Authentication</strong> → <strong>Users</strong></li>
+                            <li>Click <strong>"Add user"</strong></li>
+                            <li>Enter the email and password from above</li>
+                            <li>Set <strong>"Email confirm"</strong> to <strong>Yes</strong></li>
+                            <li>Repeat for all 3 users</li>
+                        </ol>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <h6>Set user roles:</h6>
+                        <ol>
+                            <li>Go to <strong>Table Editor</strong> → <strong>user_profiles</strong></li>
+                            <li>Find each user and edit their <strong>role</strong> field:</li>
+                            <ul>
+                                <li>superadmin@example.com → <code>super_admin</code></li>
+                                <li>admin@example.com → <code>admin</code></li>
+                                <li>user@example.com → <code>user</code></li>
+                            </ul>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Test Section -->
+            <div class="card step-card">
+                <div class="card-body">
+                    <h5 class="card-title">🧪 Step 4: Test Your Setup</h5>
+                    <p class="card-text">Once everything is set up, test your system:</p>
+                    
+                    <div class="d-grid gap-2">
+                        <a href="sign-in.html" class="btn btn-primary btn-lg">
+                            🔐 Go to Sign In Page
+                        </a>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <h6>Expected behavior:</h6>
+                        <ul>
+                            <li><strong>Super Admin</strong> → Redirects to <code>super_admin.html</code></li>
+                            <li><strong>Admin</strong> → Redirects to <code>admin.html</code></li>
+                            <li><strong>User</strong> → Redirects to <code>user.html</code></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="text-center mt-4">
+                <div class="alert alert-success">
+                    <h5>🎉 That's it!</h5>
+                    <p class="mb-0">Your Wowdash Admin Dashboard will be fully functional with role-based access control!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showSQL() {
+            const container = document.getElementById('sql-container');
+            container.style.display = container.style.display === 'none' ? 'block' : 'none';
+        }
+        
+        function copySQL() {
+            const sqlCode = document.getElementById('sql-code');
+            sqlCode.select();
+            document.execCommand('copy');
+            
+            // Show feedback
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.textContent = '✅ Copied!';
+            btn.className = 'btn btn-success ms-2';
+            
+            setTimeout(() => {
+                btn.textContent = originalText;
+                btn.className = 'btn btn-success ms-2';
+            }, 2000);
+        }
+    </script>
+</body>
+</html>

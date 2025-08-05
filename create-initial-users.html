@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Initial Users - Wowdash Setup</title>
+    <link rel="stylesheet" href="assets/css/lib/bootstrap.min.css">
+    <style>
+        .setup-container {
+            max-width: 900px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .user-card {
+            margin-bottom: 20px;
+            border-left: 4px solid;
+        }
+        .super-admin { border-left-color: #dc3545; }
+        .admin { border-left-color: #ffc107; }
+        .user { border-left-color: #28a745; }
+        .log-area {
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            height: 400px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status-pending { background-color: #ffc107; color: #000; }
+        .status-success { background-color: #28a745; color: #fff; }
+        .status-error { background-color: #dc3545; color: #fff; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="setup-container">
+            <h1 class="text-center mb-4">🚀 Create Initial Users</h1>
+            <p class="text-center text-muted mb-4">This will create the three initial users for your Wowdash Admin Dashboard</p>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <h3>Users to Create</h3>
+                    
+                    <!-- Super Admin -->
+                    <div class="card user-card super-admin">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h5 class="card-title text-danger">🔴 Super Admin</h5>
+                                    <p class="card-text">
+                                        <strong>Email:</strong> superadmin@gmail.com<br>
+                                        <strong>Password:</strong> admin<br>
+                                        <strong>Access:</strong> Full system access
+                                    </p>
+                                </div>
+                                <span id="super-admin-status" class="status-badge status-pending">Pending</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Admin -->
+                    <div class="card user-card admin">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h5 class="card-title text-warning">🟡 Admin</h5>
+                                    <p class="card-text">
+                                        <strong>Email:</strong> admin@gmail.com<br>
+                                        <strong>Password:</strong> admin<br>
+                                        <strong>Access:</strong> Manage users and view analytics
+                                    </p>
+                                </div>
+                                <span id="admin-status" class="status-badge status-pending">Pending</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- User -->
+                    <div class="card user-card user">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h5 class="card-title text-success">🟢 User</h5>
+                                    <p class="card-text">
+                                        <strong>Email:</strong> user1@gmail.com<br>
+                                        <strong>Password:</strong> admin<br>
+                                        <strong>Access:</strong> Personal dashboard only
+                                    </p>
+                                </div>
+                                <span id="user-status" class="status-badge status-pending">Pending</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center mt-4">
+                        <button class="btn btn-primary btn-lg" onclick="createAllUsers()">
+                            🚀 Create All Users
+                        </button>
+                        <button class="btn btn-secondary ms-2" onclick="testLogin()">
+                            🔐 Test Login
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <h3>Setup Progress</h3>
+                    <div class="card">
+                        <div class="card-body">
+                            <div id="log-area" class="log-area"></div>
+                            <button class="btn btn-sm btn-secondary mt-2" onclick="clearLogs()">Clear Logs</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Test Login Section -->
+            <div class="row mt-4" id="test-section" style="display: none;">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>🔐 Test User Login</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <h6>Test Super Admin</h6>
+                                    <button class="btn btn-danger btn-sm" onclick="testUserLogin('superadmin@gmail.com', 'admin', 'super_admin')">
+                                        Login as Super Admin
+                                    </button>
+                                </div>
+                                <div class="col-md-4">
+                                    <h6>Test Admin</h6>
+                                    <button class="btn btn-warning btn-sm" onclick="testUserLogin('admin@gmail.com', 'admin', 'admin')">
+                                        Login as Admin
+                                    </button>
+                                </div>
+                                <div class="col-md-4">
+                                    <h6>Test User</h6>
+                                    <button class="btn btn-success btn-sm" onclick="testUserLogin('user1@gmail.com', 'admin', 'user')">
+                                        Login as User
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="assets/js/supabase-config.js"></script>
+    
+    <script>
+        // Users to create
+        const users = [
+            {
+                email: 'superadmin@example.com',
+                password: 'admin123',
+                role: 'super_admin',
+                fullName: 'Super Administrator',
+                statusId: 'super-admin-status'
+            },
+            {
+                email: 'admin@example.com',
+                password: 'admin123',
+                role: 'admin',
+                fullName: 'System Administrator',
+                statusId: 'admin-status'
+            },
+            {
+                email: 'user1@example.com',
+                password: 'admin123',
+                role: 'user',
+                fullName: 'Regular User',
+                statusId: 'user-status'
+            }
+        ];
+
+        // Logging function
+        function log(message, type = 'info') {
+            const logArea = document.getElementById('log-area');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.innerHTML = `<span style="color: #666;">[${timestamp}]</span> <span style="color: ${type === 'error' ? 'red' : type === 'success' ? 'green' : 'black'};">${message}</span>`;
+            logArea.appendChild(logEntry);
+            logArea.scrollTop = logArea.scrollHeight;
+        }
+
+        function clearLogs() {
+            document.getElementById('log-area').innerHTML = '';
+        }
+
+        function updateStatus(statusId, status) {
+            const element = document.getElementById(statusId);
+            element.className = `status-badge status-${status}`;
+            element.textContent = status === 'success' ? 'Created' : status === 'error' ? 'Failed' : 'Pending';
+        }
+
+        // Create a single user
+        async function createUser(userInfo) {
+            log(`Creating ${userInfo.role}: ${userInfo.email}...`);
+            
+            try {
+                // Sign up the user
+                const { data, error } = await supabase.auth.signUp({
+                    email: userInfo.email,
+                    password: userInfo.password,
+                    options: {
+                        data: {
+                            full_name: userInfo.fullName,
+                            role: userInfo.role
+                        }
+                    }
+                });
+
+                if (error) {
+                    // Check if user already exists
+                    if (error.message.includes('already registered')) {
+                        log(`✅ User ${userInfo.email} already exists, updating role...`, 'success');
+                        await updateUserRole(userInfo);
+                        updateStatus(userInfo.statusId, 'success');
+                        return true;
+                    }
+                    throw error;
+                }
+
+                log(`✅ User ${userInfo.email} created successfully!`, 'success');
+                
+                // Update user profile with correct role
+                if (data.user) {
+                    await updateUserProfile(data.user.id, userInfo);
+                }
+                
+                updateStatus(userInfo.statusId, 'success');
+                return true;
+
+            } catch (error) {
+                log(`❌ Failed to create ${userInfo.email}: ${error.message}`, 'error');
+                updateStatus(userInfo.statusId, 'error');
+                return false;
+            }
+        }
+
+        // Update user profile with role
+        async function updateUserProfile(userId, userInfo) {
+            try {
+                const { error } = await supabase
+                    .from('user_profiles')
+                    .upsert({
+                        id: userId,
+                        email: userInfo.email,
+                        full_name: userInfo.fullName,
+                        role: userInfo.role,
+                        status: 'active'
+                    });
+
+                if (error) throw error;
+                log(`✅ Profile updated for ${userInfo.email} with role: ${userInfo.role}`, 'success');
+            } catch (error) {
+                log(`⚠️ Profile update failed for ${userInfo.email}: ${error.message}`, 'error');
+            }
+        }
+
+        // Update existing user role
+        async function updateUserRole(userInfo) {
+            try {
+                // Try to sign in to get user ID
+                const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+                    email: userInfo.email,
+                    password: userInfo.password
+                });
+
+                if (signInError) throw signInError;
+
+                // Update profile
+                await updateUserProfile(signInData.user.id, userInfo);
+                
+                // Sign out
+                await supabase.auth.signOut();
+                
+            } catch (error) {
+                log(`⚠️ Could not update role for ${userInfo.email}: ${error.message}`, 'error');
+            }
+        }
+
+        // Create all users
+        async function createAllUsers() {
+            log('🚀 Starting user creation process...');
+            
+            let successCount = 0;
+            
+            for (const user of users) {
+                const success = await createUser(user);
+                if (success) successCount++;
+                
+                // Small delay between creations
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            
+            log(`🏁 User creation completed! ${successCount}/${users.length} users created successfully.`);
+            
+            if (successCount > 0) {
+                document.getElementById('test-section').style.display = 'block';
+                log('📋 You can now test the login functionality below.');
+            }
+            
+            // Update dashboard stats
+            await updateDashboardStats();
+        }
+
+        // Update dashboard statistics
+        async function updateDashboardStats() {
+            try {
+                const { error } = await supabase
+                    .from('dashboard_stats')
+                    .upsert({
+                        total_users: users.length,
+                        total_admins: users.filter(u => u.role !== 'user').length,
+                        updated_at: new Date().toISOString()
+                    });
+
+                if (!error) {
+                    log('📊 Dashboard statistics updated', 'success');
+                }
+            } catch (error) {
+                log(`⚠️ Failed to update dashboard stats: ${error.message}`, 'error');
+            }
+        }
+
+        // Test user login
+        async function testUserLogin(email, password, expectedRole) {
+            log(`🔐 Testing login for ${email}...`);
+            
+            try {
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+
+                if (error) throw error;
+
+                log(`✅ Login successful for ${email}!`, 'success');
+                
+                // Get user profile to check role
+                const { data: profile, error: profileError } = await supabase
+                    .from('user_profiles')
+                    .select('*')
+                    .eq('id', data.user.id)
+                    .single();
+
+                if (!profileError && profile) {
+                    log(`👤 User role: ${profile.role}`, 'success');
+                    
+                    // Determine redirect page
+                    const redirectPage = profile.role === 'super_admin' ? 'super_admin.html' : 
+                                       profile.role === 'admin' ? 'admin.html' : 'user.html';
+                    
+                    log(`🎯 Should redirect to: ${redirectPage}`, 'info');
+                    
+                    // Ask if user wants to redirect
+                    if (confirm(`Login successful! Redirect to ${redirectPage}?`)) {
+                        window.location.href = redirectPage;
+                        return;
+                    }
+                }
+                
+                // Sign out after test
+                await supabase.auth.signOut();
+                log(`🚪 Signed out ${email}`, 'info');
+
+            } catch (error) {
+                log(`❌ Login failed for ${email}: ${error.message}`, 'error');
+            }
+        }
+
+        function testLogin() {
+            document.getElementById('test-section').style.display = 'block';
+            document.getElementById('test-section').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Initialize
+        window.addEventListener('load', function() {
+            log('🌟 User Creation Tool loaded');
+            log('📋 Click "Create All Users" to set up the initial user accounts');
+            log('⚠️ Note: Make sure you have run the database schema first!');
+        });
+    </script>
+</body>
+</html>
